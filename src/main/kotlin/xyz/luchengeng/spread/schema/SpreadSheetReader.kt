@@ -1,6 +1,7 @@
 package xyz.luchengeng.spread.schema
 
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
@@ -21,20 +22,34 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
         val file = FileInputStream(File(path))
         workbook = XSSFWorkbook(file)
         for((k,v) in rawStatements){
-            if(v.orientation == null){
+            if(v.orientation == null && !v.end){
                 root.addTypedProp(v.group,getValue(getCell(k),stmt = v),v.type)
             }else{
-                readEach(v,k)
+                if(!v.end) readEach(v,k,v.infinite)
+            }
+        }
+        for((k,v) in rawStatements){
+            if(v.orientation != null){
+                val group = root[v.group]
+                if(group is JsonArray) break;
+                val transposed = transposeEach(group as JsonObject)
+                root.remove(v.group);
+                root.add(v.group,transposed)
             }
         }
         return root.toString()
     }
-    private fun readEach(stmt : Statement,tripe : Triple<String,Int,Int>){
+    private fun readEach(stmt : Statement,tripe : Triple<String,Int,Int>,infinite : Boolean = true){
         val group : JsonObject=  if(root.has(stmt.group))root.get(stmt.group) as JsonObject else root.add(stmt.group,JsonObject()).run { root.get(stmt.group) } as JsonObject
-        if(stmt.id && getValue(getCell(tripe),stmt)!=""){
+        if((getValue(getCell(tripe),stmt)!="" && infinite)||(rawStatements[tripe]?.end != true && !infinite)){
             val arr : JsonArray = if(group.has(stmt.prop))group.get(stmt.prop) as JsonArray else group.add(stmt.prop,JsonArray()).run { group.get(stmt.prop) } as JsonArray
             arr.addTyped(getValue(getCell(tripe),stmt),stmt.type)
-            if(stmt.orientation == Orientation.COLUMN)readEach(stmt, Triple(tripe.first,tripe.second+1,tripe.third))else readEach(stmt, Triple(tripe.first,tripe.second,tripe.third+1))
+            if(stmt.orientation == Orientation.COLUMN) {
+                readEach(stmt, Triple(tripe.first, tripe.second + 1, tripe.third),infinite)
+            }
+            else {
+                readEach(stmt, Triple(tripe.first, tripe.second, tripe.third + 1),infinite)
+            }
         }
     }
     private fun getCell(sheet : String,row : Int,cell : Int) : Cell{
@@ -66,9 +81,23 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
         val pattern = Pattern.compile("\\s*")
         return pattern.matcher(content).matches()
     }
+
+    private fun transposeEach(root : JsonObject) : JsonArray{
+        val newRoot = JsonArray()
+        for(index in 0 until root.entrySet().iterator().next().value.asJsonArray.size()) {
+            val obj = JsonObject();
+            for ((name, arr) in root.entrySet()) {
+                if(arr.asJsonArray.size() > index) obj.add(name,arr.asJsonArray[index])
+            }
+            newRoot.add(obj)
+        }
+        return newRoot
+    }
 }
 
-fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.spread.model.CellType){
+private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.spread.model.CellType){
+    if(name == "") return
+    if(value == ""){this.addProperty(name,null as String?);return}
     when(type.type){
         xyz.luchengeng.spread.model.CellType.Type.BOOLEAN->{
             if(type.trueRep == value){
@@ -93,7 +122,8 @@ fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.s
     }
 }
 
-fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.model.CellType){
+private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.model.CellType){
+    if(value == ""){this.add(null as JsonElement?);return}
     when(type.type){
         xyz.luchengeng.spread.model.CellType.Type.BOOLEAN->{
             if(type.trueRep == value){
