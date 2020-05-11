@@ -29,15 +29,52 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             }
         }
         for((k,v) in rawStatements){
+            if(v.token != null){
+                val group = root[v.group]
+                root.remove(v.group);
+                root.add(v.group,tokenize(group,v.token,v.prop))
+            }
+        }
+        for((k,v) in rawStatements){
             if(v.orientation != null){
                 val group = root[v.group]
-                if(group is JsonArray) break;
+                if(group is JsonArray) break
                 val transposed = transposeEach(group as JsonObject)
                 root.remove(v.group);
                 root.add(v.group,transposed)
             }
         }
         return root.toString()
+    }
+    private fun tokenize(elem : JsonElement,token : Char,propName : String?)  : JsonElement{
+        when {
+            elem.isJsonArray -> {
+                val arr = JsonArray()
+                for(i in elem.asJsonArray){
+                    val jArr = JsonArray()
+                    for( str in i.asString.split(token)){
+                        jArr.add(str)
+                    }
+                    arr.add(jArr)
+                }
+                return arr
+            }
+            elem.isJsonPrimitive -> {
+                val jArr = JsonArray()
+                for( str in elem.asString.split(token)){
+                    jArr.add(str)
+                }
+                return jArr
+            }
+            elem.isJsonObject -> {
+                val obj = JsonObject()
+                for(prop in elem.asJsonObject.entrySet()){
+                    if(prop.key == propName)obj.add(prop.key,tokenize(prop.value,token,null))else obj.add(prop.key,prop.value)
+                }
+                return obj
+            }
+            else->throw InvalidInputException()
+        }
     }
     private fun readEach(stmt : Statement,tripe : Triple<String,Int,Int>,infinite : Boolean = true){
         val group : JsonObject=  if(root.has(stmt.group))root.get(stmt.group) as JsonObject else root.add(stmt.group,JsonObject()).run { root.get(stmt.group) } as JsonObject
