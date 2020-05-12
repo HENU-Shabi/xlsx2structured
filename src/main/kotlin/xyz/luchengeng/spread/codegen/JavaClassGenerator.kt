@@ -18,14 +18,14 @@ class JavaClassGenerator(val pkg : String,val name : String) {
                 addField(stmt.group,stmt.token!=null,stmt.type,pojo)
         }
         forEachRepeatedGroup(stmts){
-            val elem = TypeSpec.classBuilder(it[0].group.capitalize())
+            val elem = TypeSpec.classBuilder(it[0].group.capitalize().dropLast(1))
                     .addModifiers(Modifier.PUBLIC)
             for(stmt in it){
                 if(stmt.prop != null)addField(stmt.prop,stmt.token!=null,stmt.type,elem)
             }
             classes.add(elem)
             val list = ClassName.get("java.util", "List")
-            val group = ClassName.get("${pkg}.${name}",it[0].group.capitalize())
+            val group = ClassName.get("${pkg}.${name}",it[0].group.capitalize().dropLast(1))
             pojo.addField(ParameterizedTypeName.get(list,group),it[0].group)
         }
 
