@@ -17,7 +17,7 @@ import java.util.regex.Pattern
 class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int,Int>, Statement>) {
     private lateinit var workbook : XSSFWorkbook
     private val root = JsonObject()
-    fun read(path : String ) : String{
+    fun read(path : String ) : JsonObject{
 
         val file = FileInputStream(File(path))
         workbook = XSSFWorkbook(file)
@@ -44,7 +44,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
                 root.add(v.group,transposed)
             }
         }
-        return root.toString()
+        return root
     }
     private fun tokenize(elem : JsonElement,token : Char,propName : String?)  : JsonElement{
         when {

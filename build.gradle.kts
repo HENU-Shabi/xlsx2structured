@@ -15,6 +15,7 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:4.1.2")
     implementation("com.google.re2j:re2j:1.3")
     implementation("com.google.code.gson:gson:2.8.6")
+    implementation("com.squareup:javapoet:1.12.1")
 }
 
 tasks {

@@ -28,6 +28,9 @@ class ConfigBuilder {
         }
         return this
     }
+    fun buildStatements() = this.rawStatements.filter {
+        it.value.group != ""
+    }
     fun build() : String =
         Gson().toJson(this.rawStatements)
     private fun parse(tagStr : String) : Statement{
