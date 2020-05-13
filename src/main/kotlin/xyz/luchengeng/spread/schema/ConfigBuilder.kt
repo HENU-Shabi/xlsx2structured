@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.re2j.Pattern
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.xssf.usermodel.BaseXSSFEvaluationWorkbook
 import java.io.File
 
 import java.io.FileInputStream
@@ -12,13 +13,19 @@ import xyz.luchengeng.spread.exception.BadSyntaxException
 import xyz.luchengeng.spread.model.Orientation
 import xyz.luchengeng.spread.model.Statement
 import xyz.luchengeng.spread.model.getType
+import java.io.FileWriter
+import java.io.InputStream
 
 
 class ConfigBuilder {
-    private val rawStatements : MutableMap<Triple<String,Int,Int>,Statement> = mutableMapOf()
+    private var rawStatements : MutableMap<Triple<String,Int,Int>,Statement> = mutableMapOf()
     fun fromSpreadSheet(path : String): ConfigBuilder {
         val file = FileInputStream(File(path))
         val workbook = XSSFWorkbook(file)
+        iterateWorkbook(workbook)
+        return this
+    }
+    private fun iterateWorkbook(workbook: XSSFWorkbook){
         for(sheet in workbook.sheetIterator()){
             for(row in sheet.rowIterator()){
                 for(cell in row.cellIterator()){
@@ -26,13 +33,18 @@ class ConfigBuilder {
                 }
             }
         }
+    }
+    fun fromSpreadSheet(inputStream: InputStream) : ConfigBuilder{
+        iterateWorkbook(XSSFWorkbook(inputStream))
         return this
     }
-    fun buildStatements() = this.rawStatements.filter {
-        it.value.group != ""
+    fun fromSpreadSheet(file : File) = fromSpreadSheet(file.path)
+    fun build() : MutableMap<Triple<String,Int,Int>,Statement>{
+        /*this.rawStatements = this.rawStatements.filter {
+            it.value.group != ""
+        }.toMutableMap()*/
+        return this.rawStatements
     }
-    fun build() : String =
-        Gson().toJson(this.rawStatements)
     private fun parse(tagStr : String) : Statement{
         val tag = tagPattern.matcher(tagStr)
         if(!tag.matches()) throw BadSyntaxException()

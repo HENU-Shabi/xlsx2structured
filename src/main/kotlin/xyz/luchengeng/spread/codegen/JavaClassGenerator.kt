@@ -1,6 +1,7 @@
 package xyz.luchengeng.spread.codegen
 
 import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeSpec
 import xyz.luchengeng.spread.model.CellType
@@ -8,8 +9,8 @@ import xyz.luchengeng.spread.model.Statement
 import javax.lang.model.element.Modifier
 
 
-class JavaClassGenerator(val pkg : String,val name : String) {
-    fun gen(stmts : Collection<Statement>) : List<TypeSpec>{
+class JavaClassGenerator(private val pkg : String, private val name : String) {
+    fun gen(stmts : Collection<Statement>) : List<JavaFile>{
         val pojo = TypeSpec.classBuilder(name)
                 .addModifiers(Modifier.PUBLIC)
         val classes = mutableListOf(pojo)
@@ -29,9 +30,9 @@ class JavaClassGenerator(val pkg : String,val name : String) {
             pojo.addField(ParameterizedTypeName.get(list,group),it[0].group)
         }
 
-        return mutableListOf<TypeSpec>().apply {
+        return mutableListOf<JavaFile>().apply {
             for (clazz in classes){
-                this.add(clazz.build())
+                this.add(JavaFile.builder(pkg,clazz.build()).build())
             }
         }
     }
@@ -55,7 +56,9 @@ class JavaClassGenerator(val pkg : String,val name : String) {
     }
 
     private fun addField(name : String, tokenize : Boolean,type: CellType, pojo : TypeSpec.Builder){
-        println(name)
+        if(name == ""){
+            return
+        }
         when (type.type) {
             CellType.Type.STRING -> {
                 if(!tokenize)pojo.addField(String::class.java,name)

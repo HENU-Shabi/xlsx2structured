@@ -6,13 +6,24 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import com.google.re2j.Pattern
 import xyz.luchengeng.spread.model.Statement
+import java.io.File
+import java.io.FileReader
 
 class ReaderBuilder {
     private val rawStatements : MutableMap<Triple<String,Int,Int>, Statement> = mutableMapOf()
     @ExperimentalStdlibApi
-    fun fromConfig(config : String) : MutableMap<Triple<String,Int,Int>, Statement>{
+    fun fromConfig(configString : String) : ReaderBuilder{
         val json = GsonBuilder().registerTypeAdapter((object : TypeToken<Triple<String,Int,Int>>(){}).type,TripeDeserializer).create()
-        return json.fromJson(config,(object : TypeToken<MutableMap<Triple<String,Int,Int>, Statement>>(){}).type)
+        rawStatements.putAll(json.fromJson(configString,(object : TypeToken<MutableMap<Triple<String,Int,Int>, Statement>>(){}).type))
+        return this
+    }
+    @ExperimentalStdlibApi
+    fun fromConfig(file : File) : ReaderBuilder{
+        val reader = FileReader(file)
+        return fromConfig(file.readText()).also { reader.close() }
+    }
+    fun build() : SpreadSheetReader{
+        return SpreadSheetReader(rawStatements)
     }
     object TripeDeserializer : TypeAdapter<Triple<String, Int, Int>>() {
         /**

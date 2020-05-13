@@ -12,15 +12,26 @@ import xyz.luchengeng.spread.model.Orientation
 import xyz.luchengeng.spread.model.Statement
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 import java.util.regex.Pattern
 
 class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int,Int>, Statement>) {
     private lateinit var workbook : XSSFWorkbook
-    private val root = JsonObject()
+    private lateinit var root : JsonObject
     fun read(path : String ) : JsonObject{
-
+        root = JsonObject()
         val file = FileInputStream(File(path))
         workbook = XSSFWorkbook(file)
+        iterateContent()
+        return root
+    }
+    fun read(inputStream: InputStream): JsonObject{
+        root = JsonObject()
+        workbook = XSSFWorkbook(inputStream)
+        iterateContent()
+        return root
+    }
+    private fun iterateContent(){
         for((k,v) in rawStatements){
             if(v.orientation == null && !v.end){
                 root.addTypedProp(v.group,getValue(getCell(k),stmt = v),v.type)
@@ -44,7 +55,6 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
                 root.add(v.group,transposed)
             }
         }
-        return root
     }
     private fun tokenize(elem : JsonElement,token : Char,propName : String?)  : JsonElement{
         when {
@@ -52,6 +62,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
                 val arr = JsonArray()
                 for(i in elem.asJsonArray){
                     val jArr = JsonArray()
+                    if(i.isJsonNull) continue
                     for( str in i.asString.split(token)){
                         jArr.add(str)
                     }
@@ -160,14 +171,19 @@ private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luch
 }
 
 private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.model.CellType){
-    if(value == ""){this.add(null as JsonElement?);return}
+    if(value == ""){
+        this.add(null as JsonElement?)
+        return
+    }
     when(type.type){
         xyz.luchengeng.spread.model.CellType.Type.BOOLEAN->{
             if(type.trueRep == value){
                 this.add(true)
+                return
             }
             if(type.falseRep == value){
                 this.add(false)
+                return
             }
             throw InvalidInputException()
         }
@@ -180,6 +196,7 @@ private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.model
         xyz.luchengeng.spread.model.CellType.Type.ENUM->{
             if(type.map?.containsKey(value) == true){
                 this.add(type.map[value])
+                return
             }else throw InvalidInputException()
         }
     }
