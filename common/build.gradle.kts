@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm")
+    kotlin("jvm") version "1.3.10"
 }
 
 group = "xyz.luchengeng.spread"
