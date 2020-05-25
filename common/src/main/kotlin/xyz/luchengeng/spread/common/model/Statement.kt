@@ -1,4 +1,4 @@
-package xyz.luchengeng.spread.model
+package xyz.luchengeng.spread.common.model
 
 data class Statement(
 val group : String,

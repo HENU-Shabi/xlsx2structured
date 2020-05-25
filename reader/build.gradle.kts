@@ -1,8 +1,8 @@
 plugins {
-    kotlin("jvm") version "1.3.72"
+    kotlin("jvm")
 }
 
-group = "xyz.luchengeng"
+group = "xyz.luchengeng.spread"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -11,10 +11,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-
-
-
-
 }
 
 tasks {

@@ -4,8 +4,8 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeSpec
-import xyz.luchengeng.spread.model.CellType
-import xyz.luchengeng.spread.model.Statement
+import xyz.luchengeng.spread.common.model.CellType
+import xyz.luchengeng.spread.common.model.Statement
 import javax.lang.model.element.Modifier
 
 
@@ -22,7 +22,7 @@ class JavaClassGenerator(private val pkg : String, private val name : String) {
             val elem = TypeSpec.classBuilder(it[0].group.capitalize().dropLast(1))
                     .addModifiers(Modifier.PUBLIC)
             for(stmt in it){
-                if(stmt.prop != null)addField(stmt.prop,stmt.token!=null,stmt.type,elem)
+                if(stmt.prop != null)addField(stmt.prop!!,stmt.token!=null,stmt.type,elem)
             }
             classes.add(elem)
             val list = ClassName.get("java.util", "List")

@@ -1,8 +1,8 @@
-package xyz.luchengeng.spread.model
+package xyz.luchengeng.spread.common.model
 
 import com.google.re2j.Matcher
 import com.google.re2j.Pattern
-import xyz.luchengeng.spread.exception.BadSyntaxException
+import xyz.luchengeng.spread.common.exception.BadSyntaxException
 
 class CellType(
         val type : CellType.Type,

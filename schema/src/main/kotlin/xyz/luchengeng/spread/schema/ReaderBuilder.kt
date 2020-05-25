@@ -5,7 +5,7 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import com.google.re2j.Pattern
-import xyz.luchengeng.spread.model.Statement
+import xyz.luchengeng.spread.common.model.Statement
 import java.io.File
 import java.io.FileReader
 

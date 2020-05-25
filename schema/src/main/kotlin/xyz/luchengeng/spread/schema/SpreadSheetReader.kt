@@ -5,11 +5,10 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.PatternFormatting
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import xyz.luchengeng.spread.exception.InvalidInputException
-import xyz.luchengeng.spread.model.Orientation
-import xyz.luchengeng.spread.model.Statement
+import xyz.luchengeng.spread.common.exception.InvalidInputException
+import xyz.luchengeng.spread.common.model.Orientation
+import xyz.luchengeng.spread.common.model.Statement
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -43,7 +42,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             if(v.token != null){
                 val group = root[v.group]
                 root.remove(v.group);
-                root.add(v.group,tokenize(group,v.token,v.prop))
+                root.add(v.group,tokenize(group, v.token!!,v.prop))
             }
         }
         for((k,v) in rawStatements){
@@ -84,7 +83,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
                 }
                 return obj
             }
-            else->throw InvalidInputException()
+            else->throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_TOKEN)
         }
     }
     private fun readEach(stmt : Statement,tripe : Triple<String,Int,Int>,infinite : Boolean = true){
@@ -114,11 +113,11 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             else->""
         }
         if(isStringEmpty(rawVal) && stmt.required){
-            throw InvalidInputException()
+            throw InvalidInputException(cell.sheet.sheetName,row = cell.address.row,col = cell.address.column,type = InvalidInputException.InvalidInputType.REQUIRED_FIELD_MISSING)
         }
         if(isStringEmpty(rawVal)){
             if(stmt.default!=null){
-                return stmt.default
+                return stmt.default!!
             }else{
                 return ""
             }
@@ -143,40 +142,44 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
     }
 }
 
-private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.spread.model.CellType){
+private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.spread.common.model.CellType){
     if(name == "") return
     if(value == ""){this.addProperty(name,null as String?);return}
     when(type.type){
-        xyz.luchengeng.spread.model.CellType.Type.BOOLEAN->{
+        xyz.luchengeng.spread.common.model.CellType.Type.BOOLEAN->{
             if(type.trueRep == value){
                 this.addProperty(name,true)
             }
             if(type.falseRep == value){
                 this.addProperty(name,false)
             }
-            throw InvalidInputException()
+            throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_BOOLEAN_VALUE)
         }
-        xyz.luchengeng.spread.model.CellType.Type.NUMBER->{
-            this.addProperty(name,value.toDouble())
+        xyz.luchengeng.spread.common.model.CellType.Type.NUMBER->{
+            try {
+                this.addProperty(name, value.toDouble())
+            }catch ( e : Exception){
+                throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_NUMBER_VALUE)
+            }
         }
-        xyz.luchengeng.spread.model.CellType.Type.STRING->{
+        xyz.luchengeng.spread.common.model.CellType.Type.STRING->{
             this.addProperty(name,value)
         }
-        xyz.luchengeng.spread.model.CellType.Type.ENUM->{
+        xyz.luchengeng.spread.common.model.CellType.Type.ENUM->{
             if(type.map?.containsKey(value) == true){
-                this.addProperty(name,type.map[value])
-            }else throw InvalidInputException()
+                this.addProperty(name, type.map!![value])
+            }else throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_ENUM_VALUE)
         }
     }
 }
 
-private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.model.CellType){
+private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.common.model.CellType){
     if(value == ""){
         this.add(null as JsonElement?)
         return
     }
     when(type.type){
-        xyz.luchengeng.spread.model.CellType.Type.BOOLEAN->{
+        xyz.luchengeng.spread.common.model.CellType.Type.BOOLEAN->{
             if(type.trueRep == value){
                 this.add(true)
                 return
@@ -185,19 +188,19 @@ private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.model
                 this.add(false)
                 return
             }
-            throw InvalidInputException()
+            throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_BOOLEAN_VALUE)
         }
-        xyz.luchengeng.spread.model.CellType.Type.NUMBER->{
+        xyz.luchengeng.spread.common.model.CellType.Type.NUMBER->{
             this.add(value.toDouble())
         }
-        xyz.luchengeng.spread.model.CellType.Type.STRING->{
+        xyz.luchengeng.spread.common.model.CellType.Type.STRING->{
             this.add(value)
         }
-        xyz.luchengeng.spread.model.CellType.Type.ENUM->{
+        xyz.luchengeng.spread.common.model.CellType.Type.ENUM->{
             if(type.map?.containsKey(value) == true){
-                this.add(type.map[value])
+                this.add(type.map!![value])
                 return
-            }else throw InvalidInputException()
+            }else throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_ENUM_VALUE)
         }
     }
 }

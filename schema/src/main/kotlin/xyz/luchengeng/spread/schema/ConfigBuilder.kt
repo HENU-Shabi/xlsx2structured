@@ -1,19 +1,16 @@
 package xyz.luchengeng.spread.schema
 
-import com.google.gson.Gson
 import com.google.re2j.Pattern
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.xssf.usermodel.BaseXSSFEvaluationWorkbook
 import java.io.File
 
 import java.io.FileInputStream
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import xyz.luchengeng.spread.exception.BadSyntaxException
-import xyz.luchengeng.spread.model.Orientation
-import xyz.luchengeng.spread.model.Statement
-import xyz.luchengeng.spread.model.getType
-import java.io.FileWriter
+import xyz.luchengeng.spread.common.exception.BadSyntaxException
+import xyz.luchengeng.spread.common.model.Orientation
+import xyz.luchengeng.spread.common.model.Statement
+import xyz.luchengeng.spread.common.model.getType
 import java.io.InputStream
 
 
@@ -51,7 +48,8 @@ class ConfigBuilder {
         val lang = langPattern.matcher(tag.group("stmt"))
         val end = endPattern.matcher(tag.group("stmt")).lookingAt()
         if(end){
-            return Statement("",null,xyz.luchengeng.spread.model.CellType(xyz.luchengeng.spread.model.CellType.Type.NUMBER),null,false,false,null,null,true)
+            return Statement("",null,
+                xyz.luchengeng.spread.common.model.CellType(xyz.luchengeng.spread.common.model.CellType.Type.NUMBER),null,false,false,null,null,true)
         }
         lang.lookingAt()
         val repetition = lang.group("repetition")?:throw BadSyntaxException()
