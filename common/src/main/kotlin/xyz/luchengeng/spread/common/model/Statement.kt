@@ -10,9 +10,6 @@ val required : Boolean,
 val default : String?,
 val token : Char?,
 val end : Boolean = false,
+val desc : String?,
 val infinite : Boolean = true)
 
-enum class Orientation(s: String) {
-    ROW("ROW"),
-    COLUMN("COLUMN")
-}

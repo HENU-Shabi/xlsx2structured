@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import xyz.luchengeng.spread.common.exception.BadSyntaxException
 import xyz.luchengeng.spread.common.model.Orientation
 import xyz.luchengeng.spread.common.model.Statement
+
 import xyz.luchengeng.spread.common.model.getType
 import java.io.InputStream
 
@@ -54,7 +55,7 @@ class ConfigBuilder {
         val end = endPattern.matcher(tag.group("stmt")).lookingAt()
         if(end){
             return Statement("",null,
-                xyz.luchengeng.spread.common.model.CellType(xyz.luchengeng.spread.common.model.CellType.Type.NUMBER),null,false,false,null,null,true)
+                xyz.luchengeng.spread.common.model.CellType(xyz.luchengeng.spread.common.model.CellType.Type.NUMBER),null,false,false,null,null,true,null)
         }
         lang.lookingAt()
         val repetition = lang.group("repetition")?:throw BadSyntaxException()
@@ -68,7 +69,7 @@ class ConfigBuilder {
             orientation = if((lang.group("orientation")?:throw BadSyntaxException()) == "row"){Orientation.ROW}else{Orientation.COLUMN}
             prop = lang.group("prop")?:throw BadSyntaxException()
         }
-        return Statement(group,orientation,type,prop, parseArgs(lang.group("args"),"id") != null,parseArgs(lang.group("args"),"required") != null,token = (parseArgs(lang.group("args"),"token"))?.get(0),default =  parseArgs(lang.group("args"),"defaultValue"),end = false,infinite = infinite)
+        return Statement(group,orientation,type,prop, parseArgs(lang.group("args"),"id") != null,parseArgs(lang.group("args"),"required") != null,token = (parseArgs(lang.group("args"),"token"))?.get(0),default =  parseArgs(lang.group("args"),"defaultValue"),end = false,infinite = infinite,desc = parseArgs(lang.group("args"),"descValue"))
     }
 
     private fun parseArgs(args : String?, groupName : String) : String?{
@@ -96,7 +97,10 @@ class ConfigBuilder {
         private val tagPattern : Pattern = Pattern.compile("__\\\$\\{(?P<stmt>.*)}\\\$__")
         private val endPattern : Pattern = Pattern.compile(".*end\\s*each.*")
         private val langPattern : Pattern = Pattern.compile("(?P<end>end)?\\s*(?P<infinite>infinite)?\\s*(?P<repetition>each|single)\\s*(?P<orientation>row|column)?\\s*(?P<type>string|number|((?P<boolean>boolean)\\(((?P<true>[^\\s]*)\\s*as\\s*(true|false))\\s*,\\s*((?P<false>[^\\s]*)\\s*as\\s*(true|false))\\))|(enum\\((?P<enumeral>(.+)(,\\s*.+)*)\\)))\\s*(?P<group>[^\\s]*)\\s*((as)\\s*(?P<prop>[^\\s]*))?\\s*(?P<args>.*)?")
-        private val patternList = listOf(Pattern.compile(".*(?P<id>id).*"),Pattern.compile(".*(?P<required>required).*"),Pattern.compile(".*((?P<tokenize>tokenize)\\s*(?P<token>[^\\s])).*"),
-            Pattern.compile(".*((?P<default>default)\\s*(?P<defaultValue>[^\\s]+)).*"))
+        private val patternList = listOf(Pattern.compile(".*(?P<id>id).*"),
+                Pattern.compile(".*(?P<required>required).*"),
+                Pattern.compile(".*((?P<tokenize>tokenize)\\s*(?P<token>[^\\s])).*"),
+                Pattern.compile(".*((?P<default>default)\\s*(?P<defaultValue>[^\\s]+)).*"),
+                Pattern.compile(".*((?P<desc>desc)\\s*(?P<descValue>[^\\s]+)).*"))
     }
 }

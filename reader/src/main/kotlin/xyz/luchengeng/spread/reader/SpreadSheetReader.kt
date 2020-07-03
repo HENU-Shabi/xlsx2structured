@@ -109,13 +109,15 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
         val (sheet,row,cell) = tripe
         return getCell(sheet, row, cell)
     }
+    private fun emptyOrDefault(stmt: Statement) : String = stmt.default?:""
+
     @Throws(InvalidInputException::class)
     private fun getValue(cell : Cell?,stmt : Statement) : String{
-        if(cell == null) return ""
+        if(cell == null) return emptyOrDefault(stmt)
         val rawVal=  when(cell.cellType){
             CellType.NUMERIC->cell.numericCellValue.toString()
             CellType.STRING->cell.stringCellValue
-            else->""
+            else->emptyOrDefault(stmt)
         }
         if(isStringEmpty(rawVal) && stmt.required){
             throw InvalidInputException(cell.sheet.sheetName,row = cell.address.row,col = cell.address.column,type = InvalidInputException.InvalidInputType.REQUIRED_FIELD_MISSING)
@@ -124,7 +126,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             if(stmt.default!=null){
                 return stmt.default!!
             }else{
-                return ""
+                return emptyOrDefault(stmt)
             }
         }
         return rawVal
