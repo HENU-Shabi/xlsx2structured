@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.3.10"
+    kotlin("jvm")
 }
 
 group = "xyz.luchengeng.spread"
@@ -12,6 +12,7 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(project(":common"))
+    implementation(project(":schema"))
     implementation("com.squareup:javapoet:1.12.1")
 }
 

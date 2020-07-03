@@ -1,4 +1,4 @@
-package xyz.luchengeng.spread.schema
+package xyz.luchengeng.spread.reader
 
 import com.google.gson.*
 import com.google.gson.reflect.TypeToken
@@ -8,23 +8,28 @@ import com.google.re2j.Pattern
 import xyz.luchengeng.spread.common.model.Statement
 import java.io.File
 import java.io.FileReader
+import java.io.InputStream
+import java.io.InputStreamReader
 
-class ReaderBuilder {
-    private val rawStatements : MutableMap<Triple<String,Int,Int>, Statement> = mutableMapOf()
+abstract class AbstractBuilder<T> {
+    protected val rawStatements : MutableMap<Triple<String,Int,Int>, Statement> = mutableMapOf()
     @ExperimentalStdlibApi
-    fun fromConfig(configString : String) : ReaderBuilder{
+    fun fromConfig(configString : String) : AbstractBuilder<T>{
         val json = GsonBuilder().registerTypeAdapter((object : TypeToken<Triple<String,Int,Int>>(){}).type,TripeDeserializer).create()
         rawStatements.putAll(json.fromJson(configString,(object : TypeToken<MutableMap<Triple<String,Int,Int>, Statement>>(){}).type))
         return this
     }
     @ExperimentalStdlibApi
-    fun fromConfig(file : File) : ReaderBuilder{
+    fun fromStream(inputStream : InputStream) : AbstractBuilder<T>{
+        val reader = InputStreamReader(inputStream)
+        return fromConfig(reader.readText()).also { reader.close() }
+    }
+    @ExperimentalStdlibApi
+    fun fromConfig(file : File) : AbstractBuilder<T>{
         val reader = FileReader(file)
         return fromConfig(file.readText()).also { reader.close() }
     }
-    fun build() : SpreadSheetReader{
-        return SpreadSheetReader(rawStatements)
-    }
+    abstract fun build() : T
     object TripeDeserializer : TypeAdapter<Triple<String, Int, Int>>() {
         /**
          * Writes one JSON value (an array, object, string, number, boolean or null)

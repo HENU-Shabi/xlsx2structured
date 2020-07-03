@@ -1,5 +1,6 @@
 package xyz.luchengeng.spread.schema
 
+import com.google.gson.Gson
 import com.google.re2j.Pattern
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
@@ -40,7 +41,11 @@ class ConfigBuilder {
         /*this.rawStatements = this.rawStatements.filter {
             it.value.group != ""
         }.toMutableMap()*/
-        return this.rawStatements
+        return object : HashMap<Triple<String,Int,Int>,Statement>(this.rawStatements){
+            override fun toString(): String {
+                return Gson().toJson(this@ConfigBuilder.rawStatements)
+            }
+        }
     }
     private fun parse(tagStr : String) : Statement{
         val tag = tagPattern.matcher(tagStr)

@@ -1,4 +1,4 @@
-package xyz.luchengeng.spread.schema
+package xyz.luchengeng.spread.reader
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
@@ -17,6 +17,7 @@ import java.util.regex.Pattern
 class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int,Int>, Statement>) {
     private lateinit var workbook : XSSFWorkbook
     private lateinit var root : JsonObject
+    @Throws(InvalidInputException::class)
     fun read(path : String ) : JsonObject{
         root = JsonObject()
         val file = FileInputStream(File(path))
@@ -24,6 +25,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
         iterateContent()
         return root
     }
+    @Throws(InvalidInputException::class)
     fun read(inputStream: InputStream): JsonObject{
         root = JsonObject()
         workbook = XSSFWorkbook(inputStream)
@@ -33,7 +35,7 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
     private fun iterateContent(){
         for((k,v) in rawStatements){
             if(v.orientation == null && !v.end){
-                root.addTypedProp(v.group,getValue(getCell(k),stmt = v),v.type)
+                root.addTypedProp(v.group,getValue(getCell(k),stmt = v),v.type,k)
             }else{
                 if(!v.end) readEach(v,k,v.infinite)
             }
@@ -42,10 +44,10 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             if(v.token != null){
                 val group = root[v.group]
                 root.remove(v.group);
-                root.add(v.group,tokenize(group, v.token!!,v.prop))
+                root.add(v.group,tokenize(k,group, v.token!!,v.prop))
             }
         }
-        for((k,v) in rawStatements){
+        for((_,v) in rawStatements){
             if(v.orientation != null){
                 val group = root[v.group]
                 if(group is JsonArray) break
@@ -55,7 +57,8 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             }
         }
     }
-    private fun tokenize(elem : JsonElement,token : Char,propName : String?)  : JsonElement{
+    @Throws(InvalidInputException::class)
+    private fun tokenize(k:Triple<String,Int,Int>,elem : JsonElement,token : Char,propName : String?)  : JsonElement{
         when {
             elem.isJsonArray -> {
                 val arr = JsonArray()
@@ -79,18 +82,18 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             elem.isJsonObject -> {
                 val obj = JsonObject()
                 for(prop in elem.asJsonObject.entrySet()){
-                    if(prop.key == propName)obj.add(prop.key,tokenize(prop.value,token,null))else obj.add(prop.key,prop.value)
+                    if(prop.key == propName)obj.add(prop.key,tokenize(k,prop.value,token,null))else obj.add(prop.key,prop.value)
                 }
                 return obj
             }
-            else->throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_TOKEN)
+            else->throw InvalidInputException(k.first,k.second,k.third,InvalidInputException.InvalidInputType.INVALID_TOKEN)
         }
     }
     private fun readEach(stmt : Statement,tripe : Triple<String,Int,Int>,infinite : Boolean = true){
         val group : JsonObject=  if(root.has(stmt.group))root.get(stmt.group) as JsonObject else root.add(stmt.group,JsonObject()).run { root.get(stmt.group) } as JsonObject
         if((getValue(getCell(tripe),stmt)!="" && infinite)||(rawStatements[tripe]?.end != true && !infinite)){
             val arr : JsonArray = if(group.has(stmt.prop))group.get(stmt.prop) as JsonArray else group.add(stmt.prop,JsonArray()).run { group.get(stmt.prop) } as JsonArray
-            arr.addTyped(getValue(getCell(tripe),stmt),stmt.type)
+            arr.addTyped(getValue(getCell(tripe),stmt),stmt.type,tripe)
             if(stmt.orientation == Orientation.COLUMN) {
                 readEach(stmt, Triple(tripe.first, tripe.second + 1, tripe.third),infinite)
             }
@@ -99,14 +102,16 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
             }
         }
     }
-    private fun getCell(sheet : String,row : Int,cell : Int) : Cell{
-        return this.workbook.getSheet(sheet).getRow(row).getCell(cell)
+    private fun getCell(sheet : String,row : Int,cell : Int) : Cell?{
+        return this.workbook.getSheet(sheet)?.getRow(row)?.getCell(cell)
     }
-    private fun getCell(tripe : Triple<String,Int,Int>) : Cell{
+    private fun getCell(tripe : Triple<String,Int,Int>) : Cell?{
         val (sheet,row,cell) = tripe
         return getCell(sheet, row, cell)
     }
-    private fun getValue(cell : Cell,stmt : Statement) : String{
+    @Throws(InvalidInputException::class)
+    private fun getValue(cell : Cell?,stmt : Statement) : String{
+        if(cell == null) return ""
         val rawVal=  when(cell.cellType){
             CellType.NUMERIC->cell.numericCellValue.toString()
             CellType.STRING->cell.stringCellValue
@@ -141,8 +146,9 @@ class SpreadSheetReader(private val rawStatements : MutableMap<Triple<String,Int
         return newRoot
     }
 }
-
-private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.spread.common.model.CellType){
+@Throws(InvalidInputException::class)
+private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luchengeng.spread.common.model.CellType,pos : Triple<String,Int,Int>){
+    val (sheet,row,col) = pos
     if(name == "") return
     if(value == ""){this.addProperty(name,null as String?);return}
     when(type.type){
@@ -153,13 +159,13 @@ private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luch
             if(type.falseRep == value){
                 this.addProperty(name,false)
             }
-            throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_BOOLEAN_VALUE)
+            throw InvalidInputException(sheet,row,col,InvalidInputException.InvalidInputType.INVALID_BOOLEAN_VALUE)
         }
         xyz.luchengeng.spread.common.model.CellType.Type.NUMBER->{
             try {
                 this.addProperty(name, value.toDouble())
             }catch ( e : Exception){
-                throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_NUMBER_VALUE)
+                throw InvalidInputException(sheet,row,col,InvalidInputException.InvalidInputType.INVALID_NUMBER_VALUE)
             }
         }
         xyz.luchengeng.spread.common.model.CellType.Type.STRING->{
@@ -168,12 +174,13 @@ private fun JsonObject.addTypedProp(name : String,value : String,type : xyz.luch
         xyz.luchengeng.spread.common.model.CellType.Type.ENUM->{
             if(type.map?.containsKey(value) == true){
                 this.addProperty(name, type.map!![value])
-            }else throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_ENUM_VALUE)
+            }else throw InvalidInputException(sheet,row,col,InvalidInputException.InvalidInputType.INVALID_ENUM_VALUE)
         }
     }
 }
-
-private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.common.model.CellType){
+@Throws(InvalidInputException::class)
+private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.common.model.CellType,pos : Triple<String,Int,Int>){
+    val (sheet,row,col) = pos
     if(value == ""){
         this.add(null as JsonElement?)
         return
@@ -188,7 +195,7 @@ private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.commo
                 this.add(false)
                 return
             }
-            throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_BOOLEAN_VALUE)
+            throw InvalidInputException(sheet,row,col,InvalidInputException.InvalidInputType.INVALID_BOOLEAN_VALUE)
         }
         xyz.luchengeng.spread.common.model.CellType.Type.NUMBER->{
             this.add(value.toDouble())
@@ -200,7 +207,7 @@ private fun JsonArray.addTyped(value : String,type : xyz.luchengeng.spread.commo
             if(type.map?.containsKey(value) == true){
                 this.add(type.map!![value])
                 return
-            }else throw InvalidInputException(InvalidInputException.InvalidInputType.INVALID_ENUM_VALUE)
+            }else throw InvalidInputException(sheet,row,col,InvalidInputException.InvalidInputType.INVALID_ENUM_VALUE)
         }
     }
 }

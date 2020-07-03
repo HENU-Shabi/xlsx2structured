@@ -11,10 +11,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-
-
-
-
 }
 
 tasks {
