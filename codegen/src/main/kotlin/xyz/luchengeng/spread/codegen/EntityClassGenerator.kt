@@ -7,12 +7,16 @@ import javax.lang.model.element.Modifier
 
 
 class EntityClassGenerator(private var pkg : String, private val name : String) {
+    private val applicationContextPkg : String = pkg
     init{
         pkg = "${pkg}.entity.${name.decapitalize()}"
     }
     fun gen(stmts : Collection<Statement>) : List<JavaFile>{
         val pojo = TypeSpec.classBuilder(name)
                 .addModifiers(Modifier.PUBLIC)
+        pojo.addField(FieldSpec.builder(ClassName.get("${applicationContextPkg}.entity.auth", "Subject"),"submitter").addModifiers(Modifier.PUBLIC)
+                .addAnnotation(ClassName.get("javax.persistence", "OneToOne"))
+                .build())
         val classes = mutableListOf(pojo)
         for(stmt in stmts){
             if(stmt.orientation == null)
